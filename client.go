@@ -12,7 +12,7 @@ import (
 	//"github.com/howeyc/crc16"
 )
 
-const ADDRESS = "localhost:3333"
+const ADDRESS = ":3333"
 const SUBSCRIBE_COMMAND = "receive"
 const SEND_COMMAND = "send"
 
@@ -25,6 +25,8 @@ func sendError(c net.Conn, err byte) {
 }
 
 func sendFile(c net.Conn, path string, chanel string) {
+	fmt.Println(chanel)
+	fmt.Println(path)
 	file, err := os.Open(path)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -69,6 +71,7 @@ func sendFile(c net.Conn, path string, chanel string) {
 }
 
 func subscribe(c net.Conn, channelName string) bool {
+	fmt.Println(channelName)
 	channelNameLen := len(channelName)
 	message := append([]byte{0x02, byte(channelNameLen)}, []byte(channelName)...)
 	c.Write(message)
@@ -124,35 +127,34 @@ func subscribe(c net.Conn, channelName string) bool {
 
 func main() {
 	args := os.Args
-	if len(args) == 1 {
+	if len(args) < 2 {
 		fmt.Println("No Arguments")
 		os.Exit(2)
 	}
-	c, err := net.Dial("tcp", ADDRESS)
+	address := args[1] + ADDRESS
+	c, err := net.Dial("tcp", address)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	switch args[1] {
+	switch args[2] {
 	case SUBSCRIBE_COMMAND:
-		if len(args) == 2 {
-			fmt.Println("No channel Present")
-		} else if len(args) != 3 {
-			fmt.Println("Wrong Arguments")
-		} else if args[2][0] != '-' {
-			fmt.Println("Wrong channel format")
-		} else {
-			subscribe(c, args[2][1:])
-		}
-	case SEND_COMMAND:
-		if len(args) < 4 {
-			fmt.Println("Missing arguments")
-		} else if len(args) != 4 {
+		if len(args) != 4 {
 			fmt.Println("Wrong Arguments")
 		} else if args[3][0] != '-' {
+			fmt.Println("Wrong channel format")
+		} else {
+			subscribe(c, args[3][1:])
+		}
+	case SEND_COMMAND:
+		if len(args) < 5 {
+			fmt.Println("Missing arguments")
+		} else if len(args) != 5 {
+			fmt.Println("Wrong Arguments")
+		} else if args[4][0] != '-' {
 			fmt.Println("Wrong Channel Format")
 		} else {
-			sendFile(c, args[2], args[3][1:])
+			sendFile(c, args[3], args[4][1:])
 		}
 	default:
 		fmt.Println("Invalid Command")
