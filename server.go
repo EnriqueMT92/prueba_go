@@ -49,6 +49,12 @@ func removeFromChannel(c net.Conn, name string) {
 		delete(channels, name)
 		return
 	}
+	if _, found := fileRecieved[name]; found {
+		fileRecieved[name]--
+		if fileRecieved[name] == 0 {
+			delete(fileRecieved, name)
+		}
+	}
 	for index, val := range channels[name] {
 		if val == c {
 			channels[name][index] = channels[name][l]
@@ -79,18 +85,17 @@ func addToChannel(c net.Conn, name string) {
 			if err != nil {
 				break
 			}
-			fmt.Println("mdkamdamkdmamdakm")
-			lf, err := io.Copy(c, f)
+			_, err = io.Copy(c, f)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
-			fmt.Println(lf)
 			f.Close()
 			fileRecieved[name]--
 			if fileRecieved[name] == 0 {
 				delete(fileRecieved, name)
 				os.Remove("TempFolder/" + name)
 			}
+			break
 		}
 	}
 	removeFromChannel(c, name)
@@ -130,11 +135,13 @@ func handleRequest(c net.Conn) {
 	}
 	if len > 0 {
 		switch buffer[0] {
-		case 2:
+		case 0x00:
+			c.Write([]byte{0x01, 0x00})
+		case 0x02:
 			name := string(buffer[2 : buffer[1]+2])
 			addToChannel(c, name)
 			break
-		case 4:
+		case 0x04:
 			name := string(buffer[3 : buffer[1]+3])
 			channel := string(buffer[3+buffer[1] : 3+buffer[1]+buffer[2]])
 			recieveFile(c, name, channel)
@@ -143,20 +150,5 @@ func handleRequest(c net.Conn) {
 			fmt.Println(buffer)
 		}
 	}
-	/*data, err := bufio.NewReader(c).ReadString('\n')
-	if err != nil {
-		fmt.Println("Error")
-		fmt.Println(err.Error())
-		return
-	}
-	temp := strings.TrimSpace(string(data))
-	fmt.Println(temp)
-	if temp == "stop" {
-		fmt.Printf("Stop Serving %s\n", c.RemoteAddr().String())
-		c.Write([]byte("stop"))
-		break
-	}
-	result := strconv.Itoa(random()) + "\n\r"
-	c.Write([]byte(result))*/
 	c.Close()
 }
